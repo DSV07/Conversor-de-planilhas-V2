@@ -1,9 +1,9 @@
 {
   "name": "filtro-sesc",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "api/server.js",
   "scripts": {
-    "start": "node server.js"
+    "dev": "node api/server.js"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
