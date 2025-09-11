@@ -3,31 +3,37 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Filtrar Planilha SESC</title>
+    <title>Sistema de Planilhas - SESC FECOMERCIO BA</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #3665B3;
-            --primary-dark: #2a5096;
-            --secondary: #FF7F32;
+            --primary: #0055A4;
+            --primary-dark: #003A70;
+            --primary-light: #3375B6;
+            --secondary: #FF6600;
+            --secondary-dark: #CC5500;
             --light: #f8f9fa;
             --dark: #343a40;
             --gray: #6c757d;
+            --gray-light: #e9ecef;
             --success: #28a745;
             --border: #dee2e6;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.15);
             --transition: all 0.3s ease;
+            --radius: 10px;
         }
         
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Montserrat', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4eaf1 100%);
+            background: linear-gradient(135deg, #f0f5ff 0%, #e6f0ff 100%);
             color: var(--dark);
             line-height: 1.6;
             padding: 20px;
@@ -38,19 +44,31 @@
             max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 12px;
+            border-radius: 16px;
             box-shadow: var(--shadow);
             overflow: hidden;
         }
         
         header {
-            background: var(--primary);
+            background: linear-gradient(120deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: 25px;
+            padding: 30px 25px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
         }
         
-        .logo {
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: var(--secondary);
+        }
+        
+        .logo-container {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -58,94 +76,163 @@
             margin-bottom: 15px;
         }
         
+        .logo {
+            width: 70px;
+            height: 70px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
         .logo i {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
+            color: var(--primary);
+        }
+        
+        .header-text {
+            text-align: left;
         }
         
         h1 {
-            font-size: 2.2rem;
-            margin-bottom: 10px;
+            font-size: 2rem;
+            margin-bottom: 5px;
+            font-weight: 700;
         }
         
         .subtitle {
-            font-size: 1.1rem;
+            font-size: 1rem;
             opacity: 0.9;
             max-width: 600px;
-            margin: 0 auto;
+            font-weight: 400;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            text-align: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            padding: 15px;
+            flex: 1;
+            min-width: 180px;
+        }
+        
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+            font-weight: 500;
         }
         
         .tabs {
             display: flex;
-            background: #e9ecef;
+            background: var(--gray-light);
             border-bottom: 1px solid var(--border);
         }
         
         .tab {
-            padding: 15px 25px;
+            padding: 18px 30px;
             cursor: pointer;
             font-weight: 600;
             transition: var(--transition);
             border-bottom: 3px solid transparent;
+            color: var(--gray);
+            position: relative;
+            flex: 1;
+            text-align: center;
         }
         
         .tab.active {
             background: white;
-            border-bottom: 3px solid var(--primary);
+            border-bottom: 3px solid var(--secondary);
             color: var(--primary);
+        }
+        
+        .tab i {
+            margin-right: 8px;
         }
         
         .tab-content {
             display: none;
-            padding: 30px;
+            padding: 35px;
         }
         
         .tab-content.active {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 30px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         @media (max-width: 900px) {
             .tab-content.active {
                 grid-template-columns: 1fr;
             }
+            
+            .stats {
+                flex-direction: column;
+            }
         }
         
         .card {
-            background: var(--light);
-            border-radius: 10px;
-            padding: 25px;
+            background: white;
+            border-radius: var(--radius);
+            padding: 30px;
             box-shadow: var(--shadow);
             transition: var(--transition);
+            border: 1px solid var(--border);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
         
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+            box-shadow: var(--shadow-hover);
         }
         
         .card-title {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 25px;
             color: var(--primary);
-            font-size: 1.4rem;
+            font-size: 1.3rem;
+            font-weight: 600;
         }
         
         .card-title i {
             font-size: 1.6rem;
+            color: var(--secondary);
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-weight: 600;
             color: var(--dark);
+            font-size: 0.95rem;
         }
         
         .file-input-container {
@@ -169,10 +256,10 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 30px;
+            padding: 35px 20px;
             border: 2px dashed var(--border);
             border-radius: 8px;
-            background: white;
+            background: var(--light);
             transition: var(--transition);
             text-align: center;
             cursor: pointer;
@@ -180,11 +267,11 @@
         
         .file-input-label:hover {
             border-color: var(--primary);
-            background-color: rgba(54, 101, 179, 0.05);
+            background-color: rgba(0, 85, 164, 0.05);
         }
         
         .file-icon {
-            font-size: 3rem;
+            font-size: 3.2rem;
             color: var(--primary);
             margin-bottom: 15px;
         }
@@ -195,20 +282,22 @@
             color: var(--gray);
             word-break: break-word;
             text-align: center;
+            font-size: 0.9rem;
         }
         
         select, button {
             width: 100%;
-            padding: 14px 18px;
+            padding: 15px 20px;
             border: 1px solid var(--border);
             border-radius: 8px;
             font-size: 16px;
             transition: var(--transition);
+            font-weight: 500;
         }
         
         select {
             background: white;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233665B3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230055A4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
             background-repeat: no-repeat;
             background-position: right 15px center;
             background-size: 18px;
@@ -222,7 +311,7 @@
         select:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(54, 101, 179, 0.2);
+            box-shadow: 0 0 0 3px rgba(0, 85, 164, 0.2);
         }
         
         .btn {
@@ -236,12 +325,13 @@
             justify-content: center;
             gap: 10px;
             transition: var(--transition);
+            padding: 16px 20px;
         }
         
         .btn:hover {
             background-color: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         
         .btn:active {
@@ -253,7 +343,7 @@
         }
         
         .btn-secondary:hover {
-            background-color: #e6722b;
+            background-color: var(--secondary-dark);
         }
         
         .btn-success {
@@ -301,11 +391,12 @@
         }
         
         .status-message {
-            padding: 12px 15px;
+            padding: 15px;
             border-radius: 8px;
-            margin-top: 15px;
+            margin-top: 20px;
             text-align: center;
             font-weight: 500;
+            transition: var(--transition);
         }
         
         .success {
@@ -327,39 +418,52 @@
         }
         
         .preview-section {
-            margin-top: 30px;
+            margin-top: 40px;
+            padding: 0 35px 35px;
         }
         
         .preview-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         
         .preview-title {
             color: var(--primary);
             font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .preview-table-container {
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            max-height: 400px;
+            overflow-y: auto;
         }
         
         .preview-table {
             width: 100%;
             border-collapse: collapse;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: var(--shadow);
         }
         
         .preview-table th {
             background-color: var(--primary);
             color: white;
-            padding: 12px 15px;
+            padding: 15px;
             text-align: left;
             font-weight: 600;
+            position: sticky;
+            top: 0;
         }
         
         .preview-table td {
-            padding: 10px 15px;
+            padding: 12px 15px;
             border-bottom: 1px solid var(--border);
         }
         
@@ -373,7 +477,7 @@
         
         .badge {
             display: inline-block;
-            padding: 5px 10px;
+            padding: 7px 12px;
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 600;
@@ -391,34 +495,11 @@
         
         footer {
             text-align: center;
-            padding: 20px;
+            padding: 25px;
             background: var(--light);
             color: var(--gray);
             font-size: 0.9rem;
             border-top: 1px solid var(--border);
-        }
-        
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
-            text-align: center;
-        }
-        
-        .stat-item {
-            padding: 15px;
-        }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            color: var(--gray);
-            font-size: 0.9rem;
         }
         
         .arquivos-lista {
@@ -427,19 +508,24 @@
             overflow-y: auto;
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 10px;
+            padding: 15px;
         }
         
         .arquivo-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
+            padding: 12px;
             border-bottom: 1px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         
         .arquivo-item:last-child {
             border-bottom: none;
+            margin-bottom: 0;
         }
         
         .arquivo-info {
@@ -450,26 +536,51 @@
         
         .arquivo-nome {
             font-weight: 500;
+            font-size: 0.95rem;
         }
         
         .arquivo-acao {
             color: #dc3545;
             cursor: pointer;
+            padding: 5px;
         }
         
         .arquivo-acao:hover {
             color: #bd2130;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: var(--gray-light);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .help-text {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-top: 8px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <div class="logo">
-                <i class="fas fa-table"></i>
-                <div>
-                    <h1>Filtrar Planilha SESC</h1>
-                    <p class="subtitle">Filtre e visualize dados de planilhas de forma rápida e intuitiva</p>
+            <div class="logo-container">
+                <div class="logo">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="header-text">
+                    <h1>Sistema de Planilhas</h1>
+                    <p class="subtitle">SESC FECOMERCIO BAHIA</p>
                 </div>
             </div>
         </header>
@@ -490,8 +601,12 @@
         </div>
         
         <div class="tabs">
-            <div class="tab active" data-tab="single">Arquivo Único</div>
-            <div class="tab" data-tab="multiple">Múltiplos Arquivos</div>
+            <div class="tab active" data-tab="single">
+                <i class="fas fa-file-excel"></i> Arquivo Único
+            </div>
+            <div class="tab" data-tab="multiple">
+                <i class="fas fa-copy"></i> Múltiplos Arquivos
+            </div>
         </div>
         
         <!-- ABA PARA ARQUIVO ÚNICO -->
@@ -502,14 +617,18 @@
                     <div class="form-group">
                         <label for="arquivo">Selecionar arquivo:</label>
                         <div class="file-input-container">
-                            <input type="file" id="arquivo" name="arquivo" class="file-input" accept=".xlsx,.xls" required>
+                            <input type="file" id="arquivo" name="arquivo" class="file-input" accept=".xlsx,.xls,.csv" required>
                             <label for="arquivo" class="file-input-label">
                                 <div class="file-icon"><i class="fas fa-cloud-upload-alt"></i></div>
                                 <p>Clique para selecionar um arquivo ou arraste até aqui</p>
-                                <p><small>Formatos suportados: .xlsx, .xls</small></p>
+                                <p><small>Formatos suportados: .xlsx, .xls, .csv</small></p>
                             </label>
                         </div>
                         <div id="fileName" class="file-name"></div>
+                        <div class="progress-bar hidden" id="uploadProgressBar">
+                            <div class="progress" id="uploadProgress"></div>
+                        </div>
+                        <p class="help-text">Máximo: 20MB por arquivo</p>
                     </div>
                     
                     <button type="submit" id="uploadBtn" class="btn">
@@ -562,14 +681,18 @@
                     <div class="form-group">
                         <label for="arquivos">Selecionar arquivos:</label>
                         <div class="file-input-container">
-                            <input type="file" id="arquivos" name="arquivos" class="file-input" accept=".xlsx,.xls" multiple required>
+                            <input type="file" id="arquivos" name="arquivos" class="file-input" accept=".xlsx,.xls,.csv" multiple required>
                             <label for="arquivos" class="file-input-label">
                                 <div class="file-icon"><i class="fas fa-cloud-upload-alt"></i></div>
                                 <p>Clique para selecionar vários arquivos ou arraste até aqui</p>
-                                <p><small>Formatos suportados: .xlsx, .xls</small></p>
+                                <p><small>Formatos suportados: .xlsx, .xls, .csv</small></p>
                             </label>
                         </div>
                         <div id="filesName" class="file-name"></div>
+                        <div class="progress-bar hidden" id="uploadMultipleProgressBar">
+                            <div class="progress" id="uploadMultipleProgress"></div>
+                        </div>
+                        <p class="help-text">Máximo: 20MB por arquivo</p>
                     </div>
                     
                     <button type="submit" id="uploadMultipleBtn" class="btn">
@@ -581,7 +704,7 @@
                 </form>
                 
                 <div id="arquivosLista" class="arquivos-lista hidden">
-                    <h4 style="margin-bottom: 10px;">Arquivos Carregados:</h4>
+                    <h4 style="margin-bottom: 15px; color: var(--primary);">Arquivos Carregados:</h4>
                     <div id="arquivosCarregados"></div>
                 </div>
             </div>
@@ -612,7 +735,7 @@
                 <h3 class="preview-title"><i class="fas fa-table"></i> Pré-visualização</h3>
                 <span id="previewCount" class="badge badge-primary">0 linhas</span>
             </div>
-            <div class="table-responsive">
+            <div class="preview-table-container">
                 <table id="preview" class="preview-table"></table>
             </div>
         </div>
@@ -754,36 +877,71 @@
             
             uploadBtn.disabled = true;
             uploadBtn.innerHTML = '<div class="spinner"></div><span>Processando...</span>';
+            
+            // Mostrar barra de progresso
+            document.getElementById('uploadProgressBar').classList.remove('hidden');
+            
             showStatus(uploadStatus, 'Enviando e processando planilha, aguarde...', 'loading');
             
             try {
-                const resp = await fetch('/upload', { 
-                    method: 'POST', 
-                    body: formData 
+                // Simulação de progresso (substituir pela implementação real com XMLHttpRequest para progresso real)
+                simulateProgress('uploadProgress', () => {
+                    // Esta parte seria substituída pelo fetch real
+                    fetch('/upload', { 
+                        method: 'POST', 
+                        body: formData 
+                    })
+                    .then(resp => {
+                        if (!resp.ok) {
+                            throw new Error(`Erro no servidor: ${resp.status}`);
+                        }
+                        return resp.json();
+                    })
+                    .then(data => {
+                        filePath = data.filePath;
+                        
+                        unidadeSelect.innerHTML = `<option value="">Todas as unidades</option>` + 
+                            data.unidades.map(u => `<option value="${u}">${u}</option>`).join('');
+                        
+                        filtersSection.classList.add('visible');
+                        filtersPlaceholder.style.display = 'none';
+                        
+                        showStatus(uploadStatus, 'Planilha carregada com sucesso! Agora selecione uma unidade para filtrar.', 'success');
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        showStatus(uploadStatus, `Falha ao carregar planilha: ${error.message}`, 'error');
+                    })
+                    .finally(() => {
+                        uploadBtn.disabled = false;
+                        uploadBtn.innerHTML = '<i class="fas fa-upload"></i><span>Carregar Planilha</span>';
+                        document.getElementById('uploadProgressBar').classList.add('hidden');
+                    });
                 });
                 
-                if (!resp.ok) {
-                    throw new Error(`Erro no servidor: ${resp.status}`);
-                }
-                
-                const data = await resp.json();
-                filePath = data.filePath;
-                
-                unidadeSelect.innerHTML = `<option value="">Todas as unidades</option>` + 
-                    data.unidades.map(u => `<option value="${u}">${u}</option>`).join('');
-                
-                filtersSection.classList.add('visible');
-                filtersPlaceholder.style.display = 'none';
-                
-                showStatus(uploadStatus, 'Planilha carregada com sucesso! Agora selecione uma unidade para filtrar.', 'success');
             } catch (error) {
                 console.error('Erro:', error);
                 showStatus(uploadStatus, `Falha ao carregar planilha: ${error.message}`, 'error');
-            } finally {
                 uploadBtn.disabled = false;
                 uploadBtn.innerHTML = '<i class="fas fa-upload"></i><span>Carregar Planilha</span>';
+                document.getElementById('uploadProgressBar').classList.add('hidden');
             }
         });
+        
+        // Função para simular progresso (substituir por implementação real)
+        function simulateProgress(progressElementId, callback) {
+            const progressElement = document.getElementById(progressElementId);
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    callback();
+                } else {
+                    width += 5;
+                    progressElement.style.width = width + '%';
+                }
+            }, 100);
+        }
         
         // Envio do formulário de upload múltiplo
         formUploadMultiple.addEventListener('submit', async e => {
@@ -801,52 +959,72 @@
             
             uploadMultipleBtn.disabled = true;
             uploadMultipleBtn.innerHTML = '<div class="spinner"></div><span>Processando...</span>';
+            
+            // Mostrar barra de progresso
+            document.getElementById('uploadMultipleProgressBar').classList.remove('hidden');
+            
             showStatus(uploadMultipleStatus, 'Enviando e processando planilhas, aguarde...', 'loading');
             
             try {
-                const resp = await fetch('/upload-multiple', { 
-                    method: 'POST', 
-                    body: formData 
+                // Simulação de progresso
+                simulateProgress('uploadMultipleProgress', () => {
+                    // Esta parte seria substituída pelo fetch real
+                    fetch('/upload-multiple', { 
+                        method: 'POST', 
+                        body: formData 
+                    })
+                    .then(resp => {
+                        if (!resp.ok) {
+                            throw new Error(`Erro no servidor: ${resp.status}`);
+                        }
+                        return resp.json();
+                    })
+                    .then(data => {
+                        arquivosMultiplos = data;
+                        
+                        // Exibir lista de arquivos carregados
+                        arquivosCarregados.innerHTML = '';
+                        data.forEach((arquivo, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'arquivo-item';
+                            div.innerHTML = `
+                                <div class="arquivo-info">
+                                    <i class="fas fa-file-excel" style="color: #1D6F42;"></i>
+                                    <span class="arquivo-nome">${arquivo.fileName}</span>
+                                </div>
+                                <div class="arquivo-unidades">
+                                    <select id="unidade-${index}" class="unidade-select">
+                                        <option value="">Todas as unidades</option>
+                                        ${arquivo.unidades.map(u => `<option value="${u}">${u}</option>`).join('')}
+                                    </select>
+                                </div>
+                            `;
+                            arquivosCarregados.appendChild(div);
+                        });
+                        
+                        arquivosLista.classList.remove('hidden');
+                        mergeSection.classList.add('visible');
+                        mergePlaceholder.style.display = 'none';
+                        
+                        showStatus(uploadMultipleStatus, 'Planilhas carregadas com sucesso! Selecione as unidades para cada arquivo.', 'success');
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        showStatus(uploadMultipleStatus, `Falha ao carregar planilhas: ${error.message}`, 'error');
+                    })
+                    .finally(() => {
+                        uploadMultipleBtn.disabled = false;
+                        uploadMultipleBtn.innerHTML = '<i class="fas fa-upload"></i><span>Carregar Planilhas</span>';
+                        document.getElementById('uploadMultipleProgressBar').classList.add('hidden');
+                    });
                 });
                 
-                if (!resp.ok) {
-                    throw new Error(`Erro no servidor: ${resp.status}`);
-                }
-                
-                const data = await resp.json();
-                arquivosMultiplos = data;
-                
-                // Exibir lista de arquivos carregados
-                arquivosCarregados.innerHTML = '';
-                data.forEach((arquivo, index) => {
-                    const div = document.createElement('div');
-                    div.className = 'arquivo-item';
-                    div.innerHTML = `
-                        <div class="arquivo-info">
-                            <i class="fas fa-file-excel" style="color: #1D6F42;"></i>
-                            <span class="arquivo-nome">${arquivo.fileName}</span>
-                        </div>
-                        <div class="arquivo-unidades">
-                            <select id="unidade-${index}" class="unidade-select">
-                                <option value="">Todas as unidades</option>
-                                ${arquivo.unidades.map(u => `<option value="${u}">${u}</option>`).join('')}
-                            </select>
-                        </div>
-                    `;
-                    arquivosCarregados.appendChild(div);
-                });
-                
-                arquivosLista.classList.remove('hidden');
-                mergeSection.classList.add('visible');
-                mergePlaceholder.style.display = 'none';
-                
-                showStatus(uploadMultipleStatus, 'Planilhas carregadas com sucesso! Selecione as unidades para cada arquivo.', 'success');
             } catch (error) {
                 console.error('Erro:', error);
                 showStatus(uploadMultipleStatus, `Falha ao carregar planilhas: ${error.message}`, 'error');
-            } finally {
                 uploadMultipleBtn.disabled = false;
                 uploadMultipleBtn.innerHTML = '<i class="fas fa-upload"></i><span>Carregar Planilhas</span>';
+                document.getElementById('uploadMultipleProgressBar').classList.add('hidden');
             }
         });
         
@@ -1037,6 +1215,7 @@
                 }, 5000);
             }
         }
+        // Bahia é o mundo
     </script>
 </body>
 </html>
