@@ -10,7 +10,7 @@ const upload = multer({ dest: 'uploads/' });
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
+let teste
 // Colunas que sempre devem ser números
 const colunasNumericas = ['Valor', 'Saldo', 'Inicial', 'Solicitada', 'Consumida', 'Saldo Atual'];
 
