@@ -1,16 +1,20 @@
 const express = require('express');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
-const path = require('path');
+const path =require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 
+// Armazenamento em memória para mapear IDs de arquivo para caminhos de arquivo
+const fileStore = {};
+
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-let teste
+
 // Colunas que sempre devem ser números
 const colunasNumericas = ['Valor', 'Saldo', 'Inicial', 'Solicitada', 'Consumida', 'Saldo Atual'];
 
@@ -31,7 +35,12 @@ app.post('/upload', upload.single('arquivo'), async (req, res) => {
         });
 
         const unidades = Array.from(unidadesSet).sort();
-        res.json({ unidades, filePath: req.file.path, fileName: req.file.originalname });
+
+        // Gerar um ID seguro e armazenar o caminho do arquivo
+        const fileId = crypto.randomUUID();
+        fileStore[fileId] = { path: req.file.path, name: req.file.originalname };
+
+        res.json({ unidades, fileId, fileName: req.file.originalname });
     } catch (err) {
         console.error(err);
         res.status(500).send('Erro ao processar arquivo.');
@@ -57,9 +66,14 @@ app.post('/upload-multiple', upload.array('arquivos'), async (req, res) => {
             });
 
             const unidades = Array.from(unidadesSet).sort();
+
+            // Gerar um ID seguro para cada arquivo
+            const fileId = crypto.randomUUID();
+            fileStore[fileId] = { path: file.path, name: file.originalname };
+
             resultados.push({
                 fileName: file.originalname,
-                filePath: file.path,
+                fileId,
                 unidades
             });
         }
@@ -72,7 +86,14 @@ app.post('/upload-multiple', upload.array('arquivos'), async (req, res) => {
 
 // Rota para pré-visualização
 app.post('/preview', async (req, res) => {
-    const { filePath, unidade } = req.body;
+    const { fileId, unidade } = req.body;
+
+    const fileData = fileStore[fileId];
+    if (!fileData) {
+        return res.status(404).send('Arquivo não encontrado ou sessão expirada.');
+    }
+    const filePath = fileData.path;
+
     try {
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.readFile(filePath);
@@ -89,7 +110,14 @@ app.post('/preview', async (req, res) => {
 
 // Rota para filtrar um único arquivo
 app.post('/filtrar', async (req, res) => {
-    const { filePath, unidade } = req.body;
+    const { fileId, unidade } = req.body;
+
+    const fileData = fileStore[fileId];
+    if (!fileData) {
+        return res.status(404).send('Arquivo não encontrado ou sessão expirada.');
+    }
+    const filePath = fileData.path;
+
     try {
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.readFile(filePath);
@@ -126,32 +154,14 @@ app.post('/filtrar', async (req, res) => {
         // Adicionar informações com formatação
         infoLabels.forEach((label, i) => {
             const rowNumber = i + 3;
-            
-            // Label
             ws.getCell(`A${rowNumber}`).value = label + ':';
             ws.getCell(`A${rowNumber}`).font = { bold: true };
-            ws.getCell(`A${rowNumber}`).fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'F2F2F2' }
-            };
-            ws.getCell(`A${rowNumber}`).border = {
-                top: { style: 'thin' },
-                left: { style: 'thin' },
-                bottom: { style: 'thin' },
-                right: { style: 'thin' }
-            };
-            
-            // Valor
+            ws.getCell(`A${rowNumber}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F2F2F2' }};
+            ws.getCell(`A${rowNumber}`).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }};
+
             ws.getCell(`B${rowNumber}`).value = infoValues[i];
-            ws.getCell(`B${rowNumber}`).border = {
-                top: { style: 'thin' },
-                left: { style: 'thin' },
-                bottom: { style: 'thin' },
-                right: { style: 'thin' }
-            };
-            
-            // Mesclar células se necessário para valores longos
+            ws.getCell(`B${rowNumber}`).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }};
+
             if (label === 'Objeto' && infoValues[i].length > 50) {
                 ws.mergeCells(`B${rowNumber}:F${rowNumber}`);
             } else {
@@ -159,40 +169,28 @@ app.post('/filtrar', async (req, res) => {
             }
         });
 
-        // Espaço entre informações e tabela
         const dataStartRow = infoLabels.length + 5;
 
         // --- Cabeçalho da tabela ---
         const cabecalho = Object.keys(dados.itens[0]);
         const headerRow = ws.getRow(dataStartRow);
-        
+
         cabecalho.forEach((h, i) => {
             const cell = headerRow.getCell(i + 1);
             cell.value = h;
             cell.font = { bold: true, color: { argb: 'FFFFFF' } };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: '1F4E78' }
-            };
-            cell.border = {
-                top: { style: 'thin' },
-                left: { style: 'thin' },
-                bottom: { style: 'thin' },
-                right: { style: 'thin' }
-            };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F4E78' }};
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }};
         });
 
         // --- Dados da tabela ---
         dados.itens.forEach((item, rowIndex) => {
             const row = ws.getRow(dataStartRow + rowIndex + 1);
-            
             cabecalho.forEach((h, colIndex) => {
                 const cell = row.getCell(colIndex + 1);
                 let value = item[h] || '';
-                
-                // Formatar números
+
                 if (colunasNumericas.includes(h)) {
                     if (value) {
                         let num = value.toString().replace(/\s/g, '').replace(/,/g, '.').replace(/[^0-9.-]/g, '');
@@ -206,28 +204,17 @@ app.post('/filtrar', async (req, res) => {
                     cell.value = value;
                     cell.alignment = { horizontal: 'left', vertical: 'middle' };
                 }
-                
-                // Formatação visual
-                cell.border = {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
-                };
-                
-                // Zebra stripes
+
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }};
+
                 if (rowIndex % 2 === 0) {
-                    cell.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: { argb: 'F9F9F9' }
-                    };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F9F9F9' }};
                 }
             });
         });
 
         // --- Ajustar largura das colunas ---
-        ws.columns.forEach((column, i) => {
+        ws.columns.forEach((column) => {
             let maxLength = 0;
             column.eachCell({ includeEmpty: true }, (cell) => {
                 let columnLength = cell.value ? cell.value.toString().length : 10;
@@ -249,7 +236,21 @@ app.post('/filtrar', async (req, res) => {
         const outputPath = path.join('uploads', `filtrado_${Date.now()}.xlsx`);
         await newWB.xlsx.writeFile(outputPath);
 
-        res.download(outputPath);
+        res.download(outputPath, `planilha_filtrada_${unidade || 'todas'}.xlsx`, (err) => {
+            if (err) {
+                console.error('Erro ao enviar o arquivo:', err);
+            }
+            // Limpa o arquivo gerado
+            fs.unlink(outputPath, (unlinkErr) => {
+                if (unlinkErr) console.error('Erro ao limpar arquivo gerado:', unlinkErr);
+            });
+            // Limpa o arquivo original
+            fs.unlink(filePath, (unlinkErr) => {
+                if (unlinkErr) console.error('Erro ao limpar arquivo original:', unlinkErr);
+            });
+            // Remove a referência do armazenamento
+            delete fileStore[fileId];
+        });
 
     } catch (err) {
         console.error(err);
@@ -258,10 +259,9 @@ app.post('/filtrar', async (req, res) => {
 });
 
 // Rota para mesclar múltiplas planilhas
-// Rota para mesclar múltiplas planilhas
 app.post('/mesclar', async (req, res) => {
     const { arquivos } = req.body;
-    
+
     try {
         const newWB = new ExcelJS.Workbook();
         const ws = newWB.addWorksheet('Dados Mesclados');
@@ -269,7 +269,16 @@ app.post('/mesclar', async (req, res) => {
         let currentRow = 1;
 
         for (const arq of arquivos) {
-            const { filePath, unidade } = arq;
+            const { fileId, unidade } = arq;
+
+            const fileData = fileStore[fileId];
+            if (!fileData) {
+                // Pula arquivos não encontrados para não quebrar a mesclagem
+                console.warn(`Arquivo com ID ${fileId} não encontrado. Pulando.`);
+                continue;
+            }
+            const filePath = fileData.path;
+
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.readFile(filePath);
             const sheet = workbook.worksheets[0];
@@ -280,16 +289,12 @@ app.post('/mesclar', async (req, res) => {
 
             // Adicionar cabeçalho do bloco
             ws.mergeCells(`A${currentRow}:F${currentRow}`);
-            ws.getCell(`A${currentRow}`).value = `Planilha: ${path.basename(filePath)} | Unidade: ${unidade}`;
+            ws.getCell(`A${currentRow}`).value = `Planilha: ${fileData.name} | Unidade: ${unidade}`;
             ws.getCell(`A${currentRow}`).font = { bold: true, size: 14 };
-            ws.getCell(`A${currentRow}`).fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'E6E6E6' }
-            };
+            ws.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E6E6E6' }};
             currentRow++;
 
-            // Adicionar metadados COMPLETOS (incluindo número da ata)
+            // Adicionar metadados
             const metadados = [
                 `Número da Ata: ${dados.info.numeroAta || '-'}`,
                 `Objeto: ${dados.info.objeto || '-'}`,
@@ -301,17 +306,8 @@ app.post('/mesclar', async (req, res) => {
             metadados.forEach((md, i) => {
                 ws.getCell(`A${currentRow + i}`).value = md;
                 ws.getCell(`A${currentRow + i}`).font = { italic: true };
-                
-                // Adicionar bordas para melhor visualização
-                ws.getCell(`A${currentRow + i}`).border = {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
-                };
-                
-                // Mesclar células para valores longos (especialmente objeto)
-                if (i === 1 && md.length > 50) { // índice 1 é o objeto
+                ws.getCell(`A${currentRow + i}`).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }};
+                if (i === 1 && md.length > 50) {
                     ws.mergeCells(`A${currentRow + i}:F${currentRow + i}`);
                 } else {
                     ws.mergeCells(`A${currentRow + i}:C${currentRow + i}`);
@@ -322,23 +318,14 @@ app.post('/mesclar', async (req, res) => {
             // Adicionar tabela de dados
             const cabecalho = Object.keys(dados.itens[0]);
             const headerRow = ws.getRow(currentRow);
-            
+
             cabecalho.forEach((h, i) => {
                 const cell = headerRow.getCell(i + 1);
                 cell.value = h;
                 cell.font = { bold: true, color: { argb: 'FFFFFF' } };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                cell.fill = {
-                    type: 'pattern',
-                    pattern: 'solid',
-                    fgColor: { argb: '1F4E78' }
-                };
-                cell.border = {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
-                };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F4E78' }};
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }};
             });
             currentRow++;
 
@@ -349,7 +336,6 @@ app.post('/mesclar', async (req, res) => {
                     const cell = row.getCell(colIndex + 1);
                     let value = item[h] || '';
 
-                    // Formatar números
                     if (colunasNumericas.includes(h)) {
                         if (value) {
                             let num = value.toString().replace(/\s/g, '').replace(/,/g, '.').replace(/[^0-9.-]/g, '');
@@ -363,28 +349,16 @@ app.post('/mesclar', async (req, res) => {
                         cell.value = value;
                         cell.alignment = { horizontal: 'left', vertical: 'middle' };
                     }
-                    
-                    // Formatação visual
-                    cell.border = {
-                        top: { style: 'thin' },
-                        left: { style: 'thin' },
-                        bottom: { style: 'thin' },
-                        right: { style: 'thin' }
-                    };
-                    
-                    // Zebra stripes
+
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }};
+
                     if (rowIndex % 2 === 0) {
-                        cell.fill = {
-                            type: 'pattern',
-                            pattern: 'solid',
-                            fgColor: { argb: 'F9F9F9' }
-                        };
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F9F9F9' }};
                     }
                 });
                 currentRow++;
             });
 
-            // Adicionar espaçamento entre blocos
             currentRow += 2;
         }
 
@@ -409,113 +383,134 @@ app.post('/mesclar', async (req, res) => {
         const outputPath = path.join('uploads', `mesclado_${Date.now()}.xlsx`);
         await newWB.xlsx.writeFile(outputPath);
 
-        res.download(outputPath);
+        res.download(outputPath, 'planilhas_mescladas.xlsx', (err) => {
+            if (err) {
+                console.error('Erro ao enviar o arquivo mesclado:', err);
+            }
+            // Limpa o arquivo gerado
+            fs.unlink(outputPath, (unlinkErr) => {
+                if (unlinkErr) console.error('Erro ao limpar arquivo mesclado:', unlinkErr);
+            });
+
+            // Limpa todos os arquivos originais utilizados na mesclagem
+            for (const arq of arquivos) {
+                const fileData = fileStore[arq.fileId];
+                if (fileData) {
+                    fs.unlink(fileData.path, (unlinkErr) => {
+                        if (unlinkErr) console.error(`Erro ao limpar arquivo original ${fileData.name}:`, unlinkErr);
+                    });
+                    // Remove a referência do armazenamento
+                    delete fileStore[arq.fileId];
+                }
+            }
+        });
     } catch (err) {
         console.error(err);
         res.status(500).send('Erro ao mesclar planilhas.');
     }
 });
 
+// Função auxiliar para formatar datas
+function formatarData(valor) {
+    if (!valor) return '';
+    if (typeof valor === 'string') {
+        const dataRegex = /(\d{2}\/\d{2}\/\d{4})/;
+        const match = valor.match(dataRegex);
+        if (match) return match[1];
+        return valor;
+    }
+    if (valor instanceof Date) {
+        return valor.toLocaleDateString('pt-BR');
+    }
+    if (typeof valor === 'number') {
+        const data = new Date((valor - 25569) * 86400 * 1000);
+        return data.toLocaleDateString('pt-BR');
+    }
+    return String(valor);
+}
+
+// Função para extrair metadados da planilha de forma robusta
+function extrairMetadados(sheet) {
+    const info = {
+        numeroAta: '',
+        objeto: '',
+        negociacao: '',
+        inicioVigencia: '',
+        finalVigencia: ''
+    };
+    const labelMapping = {
+        'número da ata': 'numeroAta',
+        'objeto': 'objeto',
+        'negociação': 'negociacao',
+        'início da vigência': 'inicioVigencia',
+        'final da vigência': 'finalVigencia'
+    };
+    const labelsToFind = Object.keys(labelMapping);
+    let foundCount = 0;
+
+    for (let rowNumber = 1; rowNumber <= Math.min(30, sheet.rowCount); rowNumber++) {
+        const row = sheet.getRow(rowNumber);
+        if (foundCount === labelsToFind.length) break;
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            if (cell.value && typeof cell.value === 'string') {
+                const cellText = cell.value.trim().toLowerCase();
+                for (const label of labelsToFind) {
+                    if (cellText.startsWith(label)) {
+                        const infoKey = labelMapping[label];
+                        if (!info[infoKey]) {
+                            for (let i = colNumber + 1; i <= row.cellCount; i++) {
+                                const valueCell = row.getCell(i);
+                                if (valueCell.value) {
+                                    let result = valueCell.value;
+                                    if (result && typeof result === 'object' && result.richText) {
+                                        result = result.richText.map(rt => rt.text).join('');
+                                    }
+                                    info[infoKey] = result;
+                                    foundCount++;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    info.inicioVigencia = formatarData(info.inicioVigencia);
+    info.finalVigencia = formatarData(info.finalVigencia);
+    return info;
+}
+
 // Função para filtrar dados da planilha
 function filtrarDados(sheet, unidadeEscolhida) {
     let capturando = false;
     let cabecalho = [];
     const itens = [];
-    const info = { 
-        numeroAta: '', 
-        objeto: '', 
-        negociacao: '', 
-        inicioVigencia: '', 
-        finalVigencia: '' 
-    };
-
     let encontrouCabecalho = false;
+    const info = extrairMetadados(sheet);
 
-    // Extrair informações do cabeçalho de forma mais precisa e direta
-    try {
-        // Número da Ata - Linha 13, Coluna D
-        info.numeroAta = sheet.getCell('D13').value || '';
-        
-        // Objeto - Linha 14, Coluna D
-        info.objeto = sheet.getCell('D14').value || '';
-        
-        // Negociação - Linha 14, Coluna T
-        info.negociacao = sheet.getCell('T14').value || '';
-        
-        // Início da Vigência - Linha 15, Coluna T
-        info.inicioVigencia = formatarData(sheet.getCell('T15').value);
-        
-        // Final da Vigência - Linha 16, Coluna T
-        info.finalVigencia = formatarData(sheet.getCell('T16').value);
-        
-    } catch (e) {
-        console.error('Erro ao extrair informações do cabeçalho:', e);
-    }
-
-    // Função auxiliar para formatar datas
-    function formatarData(valor) {
-        if (!valor) return '';
-        
-        // Se já é uma string formatada, retorna como está
-        if (typeof valor === 'string') {
-            // Verifica se é uma data no formato brasileiro
-            const dataRegex = /(\d{2}\/\d{2}\/\d{4})/;
-            const match = valor.match(dataRegex);
-            if (match) return match[1];
-            return valor;
-        }
-        
-        // Se é um objeto Date, formata para o padrão brasileiro
-        if (valor instanceof Date) {
-            return valor.toLocaleDateString('pt-BR');
-        }
-        
-        // Se é um número (serial do Excel), converte para data
-        if (typeof valor === 'number') {
-            const data = new Date((valor - 25569) * 86400 * 1000);
-            return data.toLocaleDateString('pt-BR');
-        }
-        
-        return String(valor);
-    }
-
-    sheet.eachRow((row, rowNumber) => {
+    sheet.eachRow((row) => {
         const valores = row.values.slice(1);
-
-        // Verificar se é uma linha de unidade
         const linhaUnidade = valores.find(v => typeof v === 'string' && v.trim().startsWith('SESC -'));
         if (linhaUnidade) {
             const unidadeLinha = linhaUnidade.trim();
             capturando = unidadeEscolhida === 'Todas' || unidadeLinha === unidadeEscolhida;
-            encontrouCabecalho = false; // Resetar ao encontrar nova unidade
+            encontrouCabecalho = false;
             return;
         }
-
-        // Se estamos capturando dados para a unidade selecionada
         if (capturando) {
-            // Procurar pelo cabeçalho da tabela
             if (!encontrouCabecalho) {
-                const temCabecalho = valores.some(v => 
-                    v && typeof v === 'string' && 
-                    (v.toLowerCase().includes('descrição') || 
-                     v.toLowerCase().includes('item') ||
-                     v.toLowerCase().includes('código'))
-                );
-                
+                const temCabecalho = valores.some(v => v && typeof v === 'string' && (v.toLowerCase().includes('descrição') || v.toLowerCase().includes('item') || v.toLowerCase().includes('código')));
                 if (temCabecalho) {
                     cabecalho = valores.map(v => v || '');
                     encontrouCabecalho = true;
                     return;
                 }
             } else {
-                // Se já encontramos o cabeçalho, capturar os dados
                 const textoLinha = valores.map(v => v ? v.toString() : '').join(' ').trim();
                 const linhaVazia = valores.every(v => v === null || v === '' || v.toString().trim() === '');
-                const ehRodape = textoLinha.toLowerCase().includes('itens por unidade') || 
-                                textoLinha.toLowerCase().includes('total') || 
-                                textoLinha.toLowerCase().includes('observações') ||
-                                textoLinha.toLowerCase().includes('subtotal');
-                
+                const ehRodape = textoLinha.toLowerCase().includes('itens por unidade') || textoLinha.toLowerCase().includes('total') || textoLinha.toLowerCase().includes('observações') || textoLinha.toLowerCase().includes('subtotal');
                 if (!linhaVazia && !ehRodape) {
                     const item = {};
                     cabecalho.forEach((coluna, index) => {
@@ -523,8 +518,6 @@ function filtrarDados(sheet, unidadeEscolhida) {
                             item[coluna] = valores[index] || '';
                         }
                     });
-                    
-                    // Só adicionar se pelo menos uma célula tem valor
                     if (Object.values(item).some(v => v !== '')) {
                         itens.push(item);
                     }
@@ -532,32 +525,9 @@ function filtrarDados(sheet, unidadeEscolhida) {
             }
         }
     });
-
     return { info, itens };
 }
 
-// Rota para limpar arquivos temporários
-app.post('/limpar', (req, res) => {
-    const diretorio = 'uploads/';
-    
-    fs.readdir(diretorio, (err, files) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).send('Erro ao limpar arquivos.');
-        }
-        
-        for (const file of files) {
-            if (file !== '.gitkeep') { // Não excluir arquivo .gitkeep se existir
-                fs.unlink(path.join(diretorio, file), err => {
-                    if (err) console.error(err);
-                });
-            }
-        }
-        
-        res.send('Arquivos temporários removidos.');
-    });
-});
-
 // Iniciar servidor
-const PORT = process.env.PORT || 3000; // Render vai injetar process.env.PORT
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
